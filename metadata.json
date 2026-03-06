@@ -1,0 +1,5 @@
+{
+  "name": "Conciliador Bancario Pro",
+  "description": "Herramienta para conciliar extractos bancarios en PDF con auxiliares contables en Excel mediante Inteligencia Artificial.",
+  "requestFramePermissions": []
+}
