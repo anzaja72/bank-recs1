@@ -149,7 +149,11 @@ const extraerDatosBancoPDF = async (file: File): Promise<TransaccionBanco[]> => 
     const base64 = await fileToBase64(file);
     const base64Data = base64.split(',')[1];
     
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("No se ha configurado la clave de API de Gemini (GEMINI_API_KEY). Si estás en Netlify, añádela en las variables de entorno y vuelve a desplegar.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: [
