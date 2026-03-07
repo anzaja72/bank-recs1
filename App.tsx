@@ -5,7 +5,6 @@ import {
   Info, FileText, File as FileIcon, XCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { GoogleGenAI, Type } from '@google/genai';
 
 // ==================== TYPE DEFINITIONS ====================
 
@@ -149,42 +148,22 @@ const extraerDatosBancoPDF = async (file: File): Promise<TransaccionBanco[]> => 
     const base64 = await fileToBase64(file);
     const base64Data = base64.split(',')[1];
     
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error("No se ha configurado la clave de API de Gemini (GEMINI_API_KEY). Si estás en Netlify, añádela en las variables de entorno y vuelve a desplegar.");
-    }
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: [
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType: 'application/pdf'
-          }
-        },
-        "Extrae todas las transacciones de este extracto bancario. Devuelve un arreglo JSON de objetos. Cada objeto debe tener: 'fecha' (DD/MM/YYYY), 'descripcion' (texto descriptivo), 'referencia' (número de documento o referencia si existe, si no vacío), 'tipo' (debe ser 'INGRESO' o 'EGRESO'), 'valor' (número positivo)."
-      ],
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              fecha: { type: Type.STRING },
-              descripcion: { type: Type.STRING },
-              referencia: { type: Type.STRING },
-              tipo: { type: Type.STRING },
-              valor: { type: Type.NUMBER }
-            }
-          }
-        }
-      }
+    const response = await fetch('/.netlify/functions/gemini', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ base64Data })
     });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Error del servidor: ${response.status}`);
+    }
     
-    const text = response.text || "[]";
-    const data = JSON.parse(text);
+    const text = await response.text();
+    const data = JSON.parse(text || "[]");
+    
     return data.map((item: any, index: number) => ({
       id: `BANCO-${index}`,
       fecha: formatearFecha(item.fecha),
@@ -195,7 +174,7 @@ const extraerDatosBancoPDF = async (file: File): Promise<TransaccionBanco[]> => 
     }));
   } catch (error) {
     console.error("Error extrayendo datos del PDF:", error);
-    throw new Error("No se pudo procesar el extracto bancario.");
+    throw new Error("No se pudo procesar el extracto bancario. Asegúrate de que la API Key esté configurada correctamente en Netlify.");
   }
 };
 
