@@ -62,3 +62,7 @@ export const handler = async (event, context) => {
     };
   }
 };
+
+export const config = {
+  timeout: 15
+};
