@@ -148,13 +148,19 @@ const extraerDatosBancoPDF = async (file: File): Promise<TransaccionBanco[]> => 
     const base64 = await fileToBase64(file);
     const base64Data = base64.split(',')[1];
     
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+
     const response = await fetch('/.netlify/functions/gemini', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ base64Data })
+      body: JSON.stringify({ base64Data }),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
@@ -172,8 +178,11 @@ const extraerDatosBancoPDF = async (file: File): Promise<TransaccionBanco[]> => 
       tipo: item.tipo === 'INGRESO' ? 'INGRESO' : 'EGRESO',
       valor: normalizarValor(item.valor)
     }));
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error extrayendo datos del PDF:", error);
+    if (error.name === 'AbortError') {
+      throw new Error("La solicitud tardó demasiado (más de 15 segundos). Por favor, intenta de nuevo.");
+    }
     throw new Error("No se pudo procesar el extracto bancario. Asegúrate de que la API Key esté configurada correctamente en Netlify.");
   }
 };

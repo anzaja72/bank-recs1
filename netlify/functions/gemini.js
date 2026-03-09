@@ -18,7 +18,7 @@ export const handler = async (event, context) => {
 
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
+      model: 'gemini-flash-latest',
       contents: [
         {
           inlineData: {
